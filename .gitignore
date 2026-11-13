@@ -1,0 +1,22 @@
+# Dependency
+node_modules/
+
+# Environment (berisi rahasia)
+.env
+.env.*
+!.env.example
+
+# Log
+logs/
+*.log
+npm-debug.log*
+
+# File sistem macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Coverage test
+coverage/

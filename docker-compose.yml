@@ -1,0 +1,23 @@
+services:
+  db:          # container 1: PostgreSQL 16
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: inventory_db     # database otomatis dibuat
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data   # data tidak hilang saat container mati
+    healthcheck: ...                # cek apakah Postgres sudah siap
+
+  api:         # container 2: aplikasi Express-mu
+    build: .                        # dibangun dari Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy  # tunggu Postgres siap dulu
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/inventory_db
+      JWT_SECRET: ...
+    ports:
+      - "3000:3000"
