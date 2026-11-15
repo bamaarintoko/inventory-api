@@ -17,18 +17,24 @@ RESTful API untuk Sistem Manajemen Inventaris Barang sederhana.
 ### Opsi A: Docker Compose
 
 ```bash
+git clone https://github.com/bamaarintoko/inventory-api.git
+cd inventory-api
 docker compose up --build
 ```
 
 API berjalan di `http://localhost:3000`. Migrasi database dijalankan otomatis saat container start.
 
-> **Catatan:** Setup Docker belum saya uji langsung karena mesin pengembangan saya (macOS 11 Big Sur) tidak didukung Docker Desktop versi terbaru. Setup manual (Opsi B) sudah diuji dari clone repo yang bersih.
+> **Catatan:** Setup Docker belum saya uji langsung karena laptop saya (macOS 11 Big Sur) tidak didukung Docker Desktop versi terbaru. Setup manual (Opsi B) sudah diuji dari clone repo yang bersih.
 
 ### Opsi B: Manual
 
 Prasyarat: Node.js 22 dan PostgreSQL.
 
 ```bash
+# 0. Clone repo
+git clone https://github.com/bamaarintoko/inventory-api.git
+cd inventory-api
+
 # 1. Install dependency
 npm install
 
@@ -126,3 +132,17 @@ prisma/
 ├── schema.prisma
 └── migrations/
 ```
+
+## Pertanyaan Pemahaman
+
+### 1. Alur Request
+
+Alurnya: Router → Middleware (cek token dan validasi input) → Controller → Service → Repository → Database. Router menentukan endpoint mana yang dipanggil. Middleware memastikan user sudah login dan datanya valid. Controller menerima request dan mengirim response. Service berisi aturan bisnis, misalnya mengecek apakah barang ada. Repository yang menjalankan query ke database. Saya pisahkan seperti ini supaya setiap bagian punya satu tugas. Kalau ada bug atau database-nya diganti, saya cukup ubah satu bagian tanpa mengganggu yang lain.
+
+### 2. Keamanan & Token
+
+Menurut saya lebih aman disimpan di HttpOnly Cookie. Token di Local Storage bisa dibaca JavaScript, jadi kalau ada serangan XSS, token bisa dicuri. HttpOnly Cookie tidak bisa diakses JavaScript sama sekali. Risikonya adalah serangan CSRF, karena cookie otomatis terkirim oleh browser, tapi ini bisa dicegah dengan atribut `SameSite` dan `Secure`. Di project ini, token masih saya kembalikan lewat response body supaya mudah dites di Postman.
+
+### 3. Penanganan Konkurensi
+
+Pengecekan dan pengurangan stok saya jadikan satu query: `UPDATE items SET stock = stock - 1 WHERE id = ? AND stock >= 1`. PostgreSQL mengunci baris saat update, jadi request kedua harus menunggu. Setelah request pertama selesai, stok sudah 0, sehingga kondisi `stock >= 1` gagal dan request kedua mendapat error "Stok tidak mencukupi". Sebagai pengaman tambahan, saya pasang constraint `CHECK (stock >= 0)` di database, sehingga stok tidak mungkin negatif walaupun ada bug di kode.
